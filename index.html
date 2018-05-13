@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!--<meta name="viewport" content="width=device-width">-->
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+    <title>Schedule Automaton</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="js/courses.js"></script>
+    <script src="js/googlemap.js"></script>
+    <script src="js/sparetime.js"></script>
+</head>
+
+<body>
+    <div id="titlebar">
+        <h1 id="title">Schedule Automaton</h1>
+    </div>
+    <form method="post" id="courseInput" action= "cgi/process.py">
+        <table id="inputfield">
+            <tr id="fieldtitle">
+                <th class="titleID">ID</th>
+                <th>Course Name</th>
+                <th>Venue</th>
+                <th>Day</th>
+                <th colspan="2">Available Timeslot</th>
+                <th>Duration(Mins)</th>
+                <th>Income</th>
+                <th>Venue Expenditure</th>
+            </tr>
+            <tr class="row">
+                <td class="inputID"><input type="text" name="id" value="1" size="2"></td>
+                <td class="inputtext"><input type="text" name="courseName"></td>
+                <td class="inputtext"><input type="text" name="venue" autocomplete="on" class="venueinput" size="30"></td>
+                <td class="inputtext"><select name="dow">
+                    <option value="sunday">Sun</option>
+                    <option value="monday">Mon</option>
+                    <option value="tuesday">Tue</option>
+                    <option value="wednesday">Wed</option>
+                    <option value="thursday">Thur</option>
+                    <option value="friday">Fri</option>
+                    <option value="saturday">Sat</option>
+                </select></td>
+                <td class="inputtext"><input type="time" name="starttime"></td>
+                <td class="inputtext"><input type="time" name="endtime"></td>
+                <td class="inputtext"><input type="text" name="duration" size="4"></td>
+                <td class="inputtext"><input type="text" name="income" size="4"></td>
+                <td class="inputtext"><input type="text" name="venueExpenditure"></td>
+                <td class="deletebtn"><input type="button" value="Delete" onclick="deleteRow(this)"></td>
+            </tr>
+        </table>
+        <input type="button" value="Add another text input" onClick="addInput('inputfield');">
+        <br><br>
+        <p><b>Available Time Slots</b></p>
+        <table id="timeslots">
+            <tr>
+                <th class="day">Sunday</th>
+                <td class="addbtn"><input type="button" value="Add" onclick="addTimeslot(this,'sun')"></td>
+            </tr>
+            <tr>
+                <th class="day">Monday</th>
+                <td class="addbtn"><input type="button" value="Add" onclick="addTimeslot(this,'mon')"></td>
+            </tr>
+            <tr>
+                <th class="day">Tuesday</th>
+                <td class="addbtn"><input type="button" value="Add" onclick="addTimeslot(this,'tues')"></td>
+
+            </tr>
+            <tr>
+                <th class="day">Wednesday</th>
+                <td class="addbtn"><input type="button" value="Add" onclick="addTimeslot(this,'wed')"></td>
+
+            </tr>
+            <tr>
+                <th class="day">Thursday</th>
+                <td class="addbtn"><input type="button" value="Add" onclick="addTimeslot(this,'thury')"></td>
+
+            </tr>
+            <tr>
+                <th class="day">Friday</th>
+                <td class="addbtn"><input type="button" value="Add" onclick="addTimeslot(this,'fri')"></td>
+
+            </tr>
+            <tr>
+                <th class="day">Saturday</th>
+                <td class="addbtn"><input type="button" value="Add" onclick="addTimeslot(this,'sat')"></td>
+            </tr>
+        </table>
+        <input type="submit" value="submit">
+    </form>
+
+
+    <!--<div id="map_wrapper">
+    <div id="map_canvas" class="mapping"></div>
+</div>
+
+<div id="travel_selector">
+<p><strong>Mode of Travel: </strong>
+<select id="travelType" onchange="calcRoute();">
+<option value="WALKING">Walking</option>
+<option value="BICYCLING">Bicycling</option>
+<option value="DRIVING">Driving</option>
+<option value="TRANSIT">Transit</option>
+</select></p>
+</div>-->
+
+
+</body>
+
+</html>
