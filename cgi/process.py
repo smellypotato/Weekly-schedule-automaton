@@ -1,7 +1,9 @@
 #! /Python27/python
 import cgi
 import cgitb
+import googlemaps
 from operator import itemgetter
+from datetime import datetime
 cgitb.enable()
 
 form = cgi.FieldStorage()
@@ -19,7 +21,7 @@ courselist = [];
 
 for i in xrange(len(id)):
     course = {"id":id[i],"courseName":courseName[i],"venue":venue[i],"dow":dow[i],"starttime":starttime[i],
-    "endtime":endtime[i],"duration":duration[i],"income":income[i],"venueExpenditure":venueExpenditure[i],"nextlesson":[]}
+    "endtime":endtime[i],"duration":duration[i],"income":int(income[i]),"venueExpenditure":int(venueExpenditure[i]),"nextlesson":[]}
     courselist.append(course)
 
 avatimeslot = [];
@@ -65,6 +67,8 @@ dowendtime = form.getlist("satendtime")
 for i in xrange(len(dowstarttime)):
     avatimeslot.append({"dow":"saturday","starttime":dowstarttime[i],"endtime":dowendtime[i]})
 
+gmaps = googlemaps.Client("AIzaSyA4oqlUsj9DzX18Zy7CYdeQkj8GeOeLM_I")
+
 #remove all courses not fit in timeslot
 for item in reversed(courselist):
     fit = False;
@@ -85,6 +89,10 @@ for item in reversed(courselist):
 sortorder={"sunday":0, "monday":1, "tuesday":2, "wednesday":3, "thursday":4, "friday":5, "saturday":6}
 courselist.sort(key=lambda x: (sortorder[x["dow"]],x["starttime"]))
 
+
+for item in courselist:
+    item["id"] = str(courselist.index(item))
+
 #main point
 idgraph = {}
 x = 0
@@ -102,22 +110,63 @@ for i in xrange(len(courselist)):
             if fromcourse["endtime"] <= tocourse["starttime"]:
                 fromcourse["nextlesson"].append(tocourse["id"])
         else:
-            fromcourse["nextlesson"].append(tocourse["id"])
+            if sortorder[fromcourse["dow"]] < sortorder[tocourse["dow"]]:
+                fromcourse["nextlesson"].append(tocourse["id"])
     idgraph[courselist[i]["id"]]=courselist[i]["nextlesson"]
 
-#for course in courselist:
-    #idgraph[course["id"]] = course["nextlesson"]
+def paths(graph, v):
+    #>>> g = {1: [2, 3], 2: [3, 4], 3: [1], 4: []}
+    #>>> sorted(paths(g, 1))
+    #[[1, 2, 3], [1, 2, 4], [1, 3]]
+    #>>> sorted(paths(g, 3))
+    #[[3, 1, 2, 4]]
+    path = [v]                  # path traversed so far
+    seen = {v}                  # set of vertices in path
+    def search():
+        dead_end = True
+        for neighbour in graph[path[-1]]:
+            if neighbour not in seen:
+                dead_end = False
+                seen.add(neighbour)
+                path.append(neighbour)
+                for p in search():
+                    yield p
+                path.pop()
+                seen.remove(neighbour)
+        if dead_end:
+            yield list(path)
+    for p in search():
+        yield p
 
-def dfs(graph, node, visited):
-    if node not in visited:
-        visited.append(node)
-        for n in graph[node]:
-            dfs(graph, n, visited)
-    return visited
 
-pathlist = []
+#sort back
+courselist = sorted(courselist, key = itemgetter("id"))
+
+
+#get all possible path
+pathlist=[]
 for id in idgraph:
-    pathlist.append(dfs(idgraph, id, []))
+    for path in sorted(paths(idgraph, id)):
+        pathlist.append(path)
+
+distancelist={}
+pathlistdetails = {}
+
+for path in pathlist:
+    key = "("+",".join(path)+")"
+    pathdetails = {}
+    pathdetails["profit"] = courselist[int(path[0])]["income"] - courselist[int(path[0])]["venueExpenditure"]
+    pathlistdetails[key]=pathdetails
+    for i in xrange(len(path)):
+        if i+1 != len(path):
+            key = ','.join((path[i],path[i+1]))
+            fromcourseindex = int(path[i])
+            tocourseindex = int(path[i])+1
+            pathdetails["profit"] = pathdetails["profit"] + courselist[int(path[i+1])]["income"] - courselist[int(path[i+1])]["venueExpenditure"]
+            #the following if is for reducing request call
+            if key not in distancelist:
+                distancelist[key]=gmaps.distance_matrix(courselist[fromcourseindex]["venue"],courselist[tocourseindex]["venue"],"transit")["rows"][0]["elements"][0]["duration"]["text"]
+
 
 
 print "Content-type:text/html\r\n\r\n"
@@ -126,13 +175,24 @@ print "<head>"
 print "<title>Schedule Automaton</title>"
 print "<head>"
 print "<body>"
-#for i in xrange(len(courselist)):
-    #pathlist += getPathList(graph[i],graph2[i])
-print pathlist
+
+print pathlist, "<br>"
+
+
 for item in courselist:
     print "<p>",item,"</p>"
-#for item in avatimeslot:
-#    print "<p>",item,"</p>"
+
+for item in avatimeslot:
+    print "<p>",item,"</p>"
+
+print pathlistdetails
 print "<br>"
+
+print distancelist,"<br>"
+
+
+print "<br>"
+
+#print gmaps.distance_matrix(courselist[0]["venue"],courselist[1]["venue"],"transit")["rows"][0]["elements"][0]["duration"]["text"]
 print "</body>"
 print "</html>"
