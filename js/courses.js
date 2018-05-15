@@ -4,9 +4,9 @@ function addInput(divName){
   var row = table.insertRow(-1);
   row.setAttribute("class", "row");
   row.innerHTML ='\
-  <td class="inputID"><input type="text" name="id" value="'+(counter+1)+'" size="2"></td>\
-  <td class="inputtext"><input type="text" name="courseName"></td>\
-  <td class="inputtext"><input type="text" name="venue" autocomplete="on" class="venueinput" size="30"></td>\
+  <td class="inputID"><input type="text" name="id" value="'+(counter+1)+'" size="2" readonly></td>\
+  <td class="inputtext"><input type="text" name="courseName" required></td>\
+  <td class="inputtext"><input type="text" name="venue" autocomplete="on" class="venueinput" size="30" required></td>\
   <td class="inputtext"><select name="dow">\
                           <option value="sunday">Sun</option>\
                           <option value="monday">Mon</option>\
@@ -16,11 +16,11 @@ function addInput(divName){
                           <option value="friday">Fri</option>\
                           <option value="saturday">Sat</option>\
                         </select></td>\
-  <td class="inputtext"><input type="time" name="starttime"></td>\
-  <td class="inputtext"><input type="time" name="endtime"></td>\
-  <td class="inputtext"><input type="text" name="duration" size="4"></td>\
-  <td class="inputtext"><input type="text" name="income" size="4"></td>\
-  <td class="inputtext"><input type="text" name="venueExpenditure"></td>\
+  <td class="inputtext"><input type="time" name="starttime" required></td>\
+  <td class="inputtext"><input type="time" name="endtime" required></td>\
+  <td class="inputtext"><input type="text" name="duration" size="4" required></td>\
+  <td class="inputtext"><input type="text" name="income" size="4" required></td>\
+  <td class="inputtext"><input type="text" name="venueExpenditure" value="0" required></td>\
   <td class="deletebtn"><input type="button" value="Delete" onclick="deleteRow(this)"></td>\
   ';
   counter = counter + 1;

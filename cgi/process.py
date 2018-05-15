@@ -2,6 +2,7 @@
 import cgi
 import cgitb
 import googlemaps
+import copy
 from operator import itemgetter
 from datetime import datetime
 cgitb.enable()
@@ -16,6 +17,15 @@ endtime = form.getlist("endtime")
 duration = form.getlist("duration")
 income = form.getlist("income")
 venueExpenditure = form.getlist("venueExpenditure")
+
+
+
+print "Content-type:text/html\r\n\r\n"
+print "<html>"
+print "<head>"
+print "<title>Schedule Automaton</title>"
+print "<head>"
+print "<body>"
 
 courselist = [];
 
@@ -100,18 +110,7 @@ for i in xrange(len(courselist)):
     for j in range(i+1,len(courselist)):
         fromcourse = courselist[i]
         tocourse = courselist[j]
-        #check if next course is in time - below is wrong solution!
-        #correct solution:
-        #   1.get travelling time between fromcourse and tocourse
-        #   2.add travelling time to fromcourse earliest starttime
-        #   3.check if arriving time + tocourse starttime <= endtime
-        #   4.if ok, this is one possible edge (may not exist in the path as lessons before fromcourse affect the starttime and endtime of fromcourse)
-        if fromcourse["dow"] == tocourse["dow"]:
-            if fromcourse["endtime"] <= tocourse["starttime"]:
-                fromcourse["nextlesson"].append(tocourse["id"])
-        else:
-            if sortorder[fromcourse["dow"]] < sortorder[tocourse["dow"]]:
-                fromcourse["nextlesson"].append(tocourse["id"])
+        fromcourse["nextlesson"].append(tocourse["id"])
     idgraph[courselist[i]["id"]]=courselist[i]["nextlesson"]
 
 def paths(graph, v):
@@ -148,6 +147,8 @@ pathlist=[]
 for id in idgraph:
     for path in sorted(paths(idgraph, id)):
         pathlist.append(path)
+    if [id] not in pathlist:
+        pathlist.append([id])
 
 distancelist={}
 pathlistdetails = {}
@@ -155,44 +156,89 @@ pathlistdetails = {}
 for path in pathlist:
     key = "("+",".join(path)+")"
     pathdetails = {}
+    #profit of first item
     pathdetails["profit"] = courselist[int(path[0])]["income"] - courselist[int(path[0])]["venueExpenditure"]
     pathlistdetails[key]=pathdetails
+    pathdetails["lessons"] = []
+    #first course
+    course = copy.deepcopy(courselist[int(path[0])])
+    course["endtime"] = '{:02d}:{:02d}'.format(*divmod((int(course["starttime"][:-3]) * 60 + int(course["starttime"][-2:]) + int(course["duration"])), 60))
+
+    course.pop("nextlesson")
+    pathdetails["lessons"].append(course)
     for i in xrange(len(path)):
         if i+1 != len(path):
             key = ','.join((path[i],path[i+1]))
             fromcourseindex = int(path[i])
-            tocourseindex = int(path[i])+1
-            pathdetails["profit"] = pathdetails["profit"] + courselist[int(path[i+1])]["income"] - courselist[int(path[i+1])]["venueExpenditure"]
+            tocourseindex = int(path[i+1])
+            #calculate profit
+            pathdetails["profit"] = pathdetails["profit"] + courselist[tocourseindex]["income"] - courselist[tocourseindex]["venueExpenditure"]
             #the following if is for reducing request call
             if key not in distancelist:
-                distancelist[key]=gmaps.distance_matrix(courselist[fromcourseindex]["venue"],courselist[tocourseindex]["venue"],"transit")["rows"][0]["elements"][0]["duration"]["text"]
+                distancelist[key]=int(gmaps.distance_matrix(courselist[fromcourseindex]["venue"],courselist[tocourseindex]["venue"],"transit")["rows"][0]["elements"][0]["duration"]["text"].split()[0])
+                #very close
+                if distancelist[key] < 5:
+                    distancelist[key] = 0
+                #add buffer time
+                elif distancelist[key] >10:
+                    distancelist[key] = distancelist[key] + 10
+            course = copy.deepcopy(courselist[tocourseindex])
+            #print courselist[fromcourseindex],"<br>",course
+            if courselist[fromcourseindex]["dow"] == course["dow"]:
+                #print pathdetails["lessons"]#[i]["endtime"]
+                earlieststarttime = '{:02d}:{:02d}'.format(*divmod((int(courselist[fromcourseindex]["endtime"][:-3]) * 60 + int(courselist[fromcourseindex]["endtime"][-2:]) + distancelist[key]), 60))
+                #earlieststarttime = "18:00"
+                #choose the later starttime
+                if earlieststarttime > course["starttime"]:
+                    course["starttime"] = earlieststarttime
+                #check end time is valid
+                earliestendtime = '{:02d}:{:02d}'.format(*divmod((int(course["starttime"][:-3]) * 60 + int(course["starttime"][-2:]) + int(course["duration"])), 60))
+                if earliestendtime <= course["endtime"]:
+                    course["endtime"] = earliestendtime
+                else: #not fit
+                    pathdetails["profit"] = -99999
+                    continue
+            else :
+                course["endtime"] = '{:02d}:{:02d}'.format(*divmod((int(course["starttime"][:-3]) * 60 + int(course["starttime"][-2:]) + int(course["duration"])), 60))
+            course.pop("nextlesson")
+            pathdetails["lessons"].append(course)
+            #print key, pathdetails, "<br>"
 
+#print distancelist
+#print courselist
+#for item in pathlistdetails:
+#    print "<p>",item,"</p>"
 
-
-print "Content-type:text/html\r\n\r\n"
-print "<html>"
-print "<head>"
-print "<title>Schedule Automaton</title>"
-print "<head>"
-print "<body>"
-
-print pathlist, "<br>"
-
-
-for item in courselist:
-    print "<p>",item,"</p>"
-
-for item in avatimeslot:
-    print "<p>",item,"</p>"
-
-print pathlistdetails
+#for item in avatimeslot:
+#    print "<p>",item,"</p>"
+#for key in pathlistdetails:
+#    print key, pathlistdetails[key]
+#    print "<br>"
+#print "<br>"
+#for item in sorted(pathlistdetails.items(), key=lambda x: x[1]['profit'], reverse = True):
+#    print item, "<br>"
+print "<h2>Calculated Result</h2>"
+bestresult = sorted(pathlistdetails.items(), key=lambda x: x[1]['profit'], reverse = True)[0]
+print "<p>Weely Net Income: $" + str(bestresult[1]["profit"]) + "</p>"
+#print bestresult
+print "<h3>Details:</h3>"
+print "<table border = 'solid'>"
+print "<tr><th>Day</th><th colspan>Suggested Timeslot</th><th>Course</th><th>Venue</th><th>Income</th><th>Venue Expenditure</th>"
+for lesson in bestresult[1]["lessons"]:
+    print "<tr>"
+    print "<td>",lesson["dow"],"</td><td>", lesson["starttime"],"~", lesson["endtime"],"</td><td>",lesson["courseName"],"</td><td>", lesson["venue"],"</td><td>$", lesson["income"],"</td><td>$", lesson["venueExpenditure"],"</td>"
+    print "</tr>"
+print "</table>"
+print "<h3>Your available timeslots:</h3>"
+print "<table border = 'solid'>"
+print "<tr><th>Day</th><th>Timeslot</th>"
+for timeslot in avatimeslot:
+    print "<tr>"
+    print "<td>",timeslot["dow"], "</td><td>", timeslot["starttime"],"~", timeslot["endtime"],"</td>"
+    print "</tr>"
+print "</table>"
 print "<br>"
+print "<button onClick='location.href = \"../index.html\"'>Try a new schedule</button>"
 
-print distancelist,"<br>"
-
-
-print "<br>"
-
-#print gmaps.distance_matrix(courselist[0]["venue"],courselist[1]["venue"],"transit")["rows"][0]["elements"][0]["duration"]["text"]
 print "</body>"
 print "</html>"
